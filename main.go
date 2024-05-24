@@ -12,29 +12,19 @@ import (
 	"time"
 )
 
+// Utility Map function for mapping arrays
+func Map[T, U any](ts []T, f func(T) U) []U {
+	us := make([]U, len(ts))
+	for i := range ts {
+		us[i] = f(ts[i])
+	}
+	return us
+}
+func BranchIdExtraction(x BranchListInner) string {
+	return x.BranchID
+}
+
 const AGILITY_API = "https://agilitywmstest.bc.com/Prod_DB_IIAgilityPublic/rest/"
-
-// Use this to parse login responses
-type LoginResponse struct {
-	Response struct {
-		SessionContextId string `json:"SessionContextId"`
-		InitialBranch    string `json:"InitialBranch"`
-		ReturnCode       int    `json:"ReturnCode"`
-		MessageText      string `json:"MessageText"`
-	} `json:"response"`
-}
-
-// Use this to parse pricing group update responses
-type PricingGroupUpdateResponse struct {
-	Response struct {
-		DsAuditResults struct {
-			DsAuditResults struct {
-			} `json:"dsAuditResults"`
-		} `json:"dsAuditResults"`
-		ReturnCode  int    `json:"ReturnCode"`
-		MessageText string `json:"MessageText"`
-	} `json:"response"`
-}
 
 func login(payload *strings.Reader) LoginResponse {
 	response, err := http.Post(AGILITY_API+"Session/Login", "application/json", payload)
@@ -87,7 +77,7 @@ func getContextID(username string, password string) string {
 	return contextID
 }
 
-func clientLogin(username string, password string) string {
+func clientLogin(username string, password string) []string {
 	//Login client to confirm identity. Retreving default branch.
 
 	var CLIENT_LOGIN_INFO *strings.Reader = strings.NewReader(`{
@@ -102,13 +92,47 @@ func clientLogin(username string, password string) string {
 
 	sessionResponse := loginResponse.Response
 	var messageText string = sessionResponse.MessageText
+	var contextID string = sessionResponse.SessionContextId
 	var InitialBranch string = sessionResponse.InitialBranch
 	if messageText != "" {
 		log.Print("User:"+username+"  Client login failed. :", messageText)
-		return ""
+		var branchlist []string
+		return branchlist
 	} else {
 		log.Print("User:" + username + "  Client login successful.")
-		return InitialBranch
+
+		//Get available branches
+		req, err := http.NewRequest("POST", AGILITY_API+"Session/BranchList", nil)
+
+		if err != nil {
+			log.Print("BranchLIst request failure:", err)
+		}
+
+		req.Header.Set("ContextId", contextID)
+		req.Header.Set("Branch", InitialBranch)
+		req.Header.Set("Content-Type", "application/json")
+		response, err := http.DefaultClient.Do(req)
+
+		//reading response
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal("BranchList read response body error:", err)
+		}
+
+		//Parsing Json
+		var branchListResponse BranchListResponse
+		if err := json.Unmarshal(body, &branchListResponse); err != nil {
+			log.Print("Pricing Group Update , cannot unmarshal JSON:", err)
+
+		}
+		sessionResponse := branchListResponse.Response
+		var branchListResponseInner = sessionResponse.BranchListResponse
+		var dsBranchListResponse = branchListResponseInner.DsBranchListResponse
+		var dtBranchListResponse = dsBranchListResponse.DtBranchListResponse
+
+		var branchlist []string = Map(dtBranchListResponse, BranchIdExtraction)
+
+		return branchlist
 	}
 
 }
@@ -154,7 +178,7 @@ func changePriceGroup(contextID string, branch string, customerID string, shipTo
 
 	}
 
-	fmt.Println("Price Group response:", pricingGroupUdateResponse)
+	// fmt.Println("Price Group response:", pricingGroupUdateResponse)
 
 	sessionResponse := pricingGroupUdateResponse.Response
 
@@ -197,8 +221,8 @@ func main() {
 		//extract data
 		client_username := r.PostFormValue("client-username")
 		client_password := r.PostFormValue("client-password")
-		branch := clientLogin(client_username, client_password)
-		if branch == "" {
+		branchList := clientLogin(client_username, client_password)
+		if len(branchList) == 0 {
 			htmlStr := fmt.Sprintf(`<p style='color:red;visibility:visible !important' >LOGIN FAILED, CHECK USERNAME OR PASSWORD</p>
 					<script>
 			   		document.getElementById("priceGroupForm").removeAttribute("hidden");
@@ -207,15 +231,20 @@ func main() {
 			tmpl.Execute(w, nil)
 
 		} else {
-			htmlStr := fmt.Sprintf(`<div class='mb-2'>
-									<label for='branch'>Branch</label>
-									<input type='text' name='branch' id='branch' class='form-control' readonly required />
-									</div>
+			htmlStr1 := `<div class='mb-2'>
+			<label for='branch'>Branch</label> 
+			<select name="branch" id="branch" class='form-control' required>`
+			htmlStr3 := `</select> 
 									<script>
 									document.getElementById("LoginForm").setAttribute('hidden','');
            							document.getElementById("priceGroupForm").style.visibility='visible';
-									document.getElementById("branch").value ="%s";
-									</script>`, branch)
+									</script>`
+			htmlStr2 := ""
+			for _, element := range branchList {
+				htmlStr2 = htmlStr2 + fmt.Sprintf(`<option value="%s">%s</option>`, element, element)
+			}
+
+			htmlStr := htmlStr1 + htmlStr2 + htmlStr3
 			tmpl, _ := template.New("t").Parse(htmlStr)
 			tmpl.Execute(w, nil)
 		}
@@ -230,13 +259,14 @@ func main() {
 
 		//extract data
 		branch := r.PostFormValue("branch")
+		operation := r.PostFormValue("operation")
 		CustomerID := r.PostFormValue("customer-id")
 		ShiptoSequence := r.PostFormValue("customer-ship-to")
 		priceGroup := r.PostFormValue("pricing-group-id")
 
 		log.Print(branch + " " + priceGroup + " " + CustomerID + " " + ShiptoSequence)
 
-		messageText, result := changePriceGroup(contextID, branch, CustomerID, ShiptoSequence, "Add", priceGroup)
+		messageText, result := changePriceGroup(contextID, branch, CustomerID, ShiptoSequence, operation, priceGroup)
 		htmlStr := ""
 		if result == "Success" {
 			htmlStr = fmt.Sprintf(`<tr><th scope="row">%s</th>
@@ -245,7 +275,7 @@ func main() {
 			<td>%s</td>
 			<td style='color:green'>%s</td>
 			<td>%s</td>
-		</tr>`, "add", priceGroup, CustomerID, ShiptoSequence, result, messageText)
+		</tr>`, operation, priceGroup, CustomerID, ShiptoSequence, result, messageText)
 		} else if result == "Warning" {
 			htmlStr = fmt.Sprintf(`<tr><th scope="row">%s</th>
 			<td>%s</td>
@@ -253,7 +283,7 @@ func main() {
 			<td>%s</td>
 			<td style='color:orange'>%s</td>
 			<td>%s</td>
-		</tr>`, "add", priceGroup, CustomerID, ShiptoSequence, result, messageText)
+		</tr>`, operation, priceGroup, CustomerID, ShiptoSequence, result, messageText)
 		} else {
 			htmlStr = fmt.Sprintf(`<tr><th scope="row">%s</th>
 			<td>%s</td>
@@ -261,7 +291,7 @@ func main() {
 			<td>%s</td>
 			<td style='color:red'>%s</td>
 			<td>%s</td>
-		</tr>`, "add", priceGroup, CustomerID, ShiptoSequence, result, messageText)
+		</tr>`, operation, priceGroup, CustomerID, ShiptoSequence, result, messageText)
 		}
 
 		tmpl, _ := template.New("t").Parse(htmlStr)
@@ -278,5 +308,5 @@ func main() {
 	http.HandleFunc("/login/", loginRequest)
 	http.HandleFunc("/add-price-group/", addRequest)
 
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":8045", nil))
 }
