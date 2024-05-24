@@ -12,101 +12,124 @@
         integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
         crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/debug.js"></script>
+    <script>
+        function UpdateButton() {
+            if (document.getElementById('operation').value == "Add") {
+                document.getElementById('submission-button').innerHTML = "Add &nbsp &nbsp &nbsp"
+                document.getElementById('submission-button-style').classList.add("btn-success")
+                document.getElementById('submission-button-style').classList.remove("btn-danger")
+            } else {
+                document.getElementById('submission-button').innerHTML = "Delete &nbsp &nbsp &nbsp"
+                document.getElementById('submission-button-style').classList.remove("btn-success")
+                document.getElementById('submission-button-style').classList.add("btn-danger")
+            }
+        }
+    </script>
 </head>
 
-<body class="container">
-    <div class="row mt-4 g-4">
-        <div class="col-4">
-            <form hx-post="/login/" hx-indicator="#spinner1" hx-target="#branchInput" id="LoginForm">
-                <h3>Login</h3>
-                <div class="mb-3" style="width:170px">
-                    <input type="text" name="client-username" id="client-username" class="form-control"
-                        placeholder="Enter employee ID" required
-                        onkeydown="if(['Space'].includes(arguments[0].code)){return false;}"
-                        oninput="this.value = this.value.toUpperCase()" />
-                </div>
-                <div class="mb-2" style="width:310px">
-                    <input type="password" name="client-password" id="client-password" class="form-control"
-                        placeholder="Enter password." required
-                        onkeydown="if(['Space'].includes(arguments[0].code)){return false;}" />
-                    <i class="bi bi-eye-slash" id="togglePassword"></i>
-                </div>
-                <button type="submit" class="btn btn-success">
-                    <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner1" role="status"
-                        aria-hidden="true"></span>
-                    Login &nbsp &nbsp &nbsp
-                </button>
-                <script>
-                    const togglePassword = document
-                        .querySelector('#togglePassword');
-                    const password = document.querySelector('#client-password');
-                    togglePassword.addEventListener('click', () => {
-                        // Toggle the type attribute using
-                        // getAttribure() method
-                        const type = password
-                            .getAttribute('type') === 'password' ?
-                            'text' : 'password';
-                        password.setAttribute('type', type);
-                        // Toggle the eye and bi-eye icon
-                        togglePassword.classList.toggle('bi-eye')
-                    });
-                </script>
-            </form>
-            <form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin" hx-indicator="#spinner"
-                style="visibility: hidden;" id="priceGroupForm">
-                <div id="branchInput">
-                    <div class="mb-2">
-                        <label for="branch">Branch</label>
-                        <input type="text" name="branch" id="branch" class="form-control" readonly />
+<body>
+    <nav style="background-color: aquamarine;">
+        <h1> Pricing Group Builder</h1>
+        <h3>So intuitive that no instruction is needed.</h3>
+    </nav>
+    <div class="container">
+        <div class="row mt-4 g-4">
+            <div class="col-4">
+                <form hx-post="/login/" hx-indicator="#spinner1" hx-target="#branchInput" id="LoginForm">
+                    <h3>Login</h3>
+                    <div class="mb-3" style="width:170px">
+                        <input type="text" name="client-username" id="client-username" class="form-control"
+                            placeholder="Enter employee ID" required
+                            onkeydown="if(['Space'].includes(arguments[0].code)){return false;}"
+                            oninput="this.value = this.value.toUpperCase()" />
                     </div>
-                </div>
-                <div class="mb-2">
-                    <label for="operation">Operation </label>
-                    <select  type="text" name="operation" id="operation" class="form-control">
-                        <option value="Add">Add</option>
-                        <option value="Delete">Delete</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label for="pricing-group-id">Pricing group ID</label>
-                    <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
-                        style="width:270px" />
-                </div>
-                <div class="mb-3">
-                    <label for="customer-id">Customer ID</label>
-                    <input type="text" name="customer-id" id="customer-id" class="form-control" style="width:270px" />
-                </div>
-                <div class="mb-2">
-                    <label for="customer-ship-to">Customer Ship-to</label>
-                    <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
-                        style="width:90px" />
-                </div>
-                <button type="submit" class="btn btn-primary">
-                    <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
-                        aria-hidden="true"></span>
-                    Update  &nbsp &nbsp &nbsp
-                </button>
-            </form>
-        </div>
-        <div class="col-1">
-            <table class="table" style="width: 700px;">
-                <thead>
-                    <tr>
-                        <th scope="col"> Operation</th>
-                        <th scope="col">Pricing Group ID</th>
-                        <th scope="col">Customer ID</th>
-                        <th scope="col">Ship-to</th>
-                        <th scope="col">Success/Fail</th>
-                        <th scope="col">Message</th>
-                    </tr>
-                </thead>
-                <tbody id="requestList">
+                    <div class="mb-2" style="width:310px">
+                        <input type="password" name="client-password" id="client-password" class="form-control"
+                            placeholder="Enter your Agility password." required
+                            onkeydown="if(['Space'].includes(arguments[0].code)){return false;}" />
+                        <i class="bi bi-eye-slash" id="togglePassword"></i>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner1" role="status"
+                            aria-hidden="true"></span>
+                        Login &nbsp &nbsp &nbsp
+                    </button>
+                    <script>
+                        const togglePassword = document
+                            .querySelector('#togglePassword');
+                        const password = document.querySelector('#client-password');
+                        togglePassword.addEventListener('click', () => {
+                            // Toggle the type attribute using
+                            // getAttribure() method
+                            const type = password
+                                .getAttribute('type') === 'password' ?
+                                'text' : 'password';
+                            password.setAttribute('type', type);
+                            // Toggle the eye and bi-eye icon
+                            togglePassword.classList.toggle('bi-eye')
+                        });
+                    </script>
+                </form>
+                <form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin" hx-indicator="#spinner"
+                    style="visibility: hidden;" id="priceGroupForm">
+                    <div id="branchInput">
+                        <div class="mb-2">
+                            <label for="branch">Branch</label>
+                            <input type="text" name="branch" id="branch" class="form-control" readonly />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label for="operation">Operation </label>
+                        <select type="text" name="operation" id="operation" class="form-control"
+                            onchange="UpdateButton()">
+                            <option value="Add" selected>Add</option>
+                            <option value="Delete">Delete</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label for="pricing-group-id">Pricing group ID</label>
+                        <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
+                            style="width:270px" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-id">Customer ID</label>
+                        <input type="text" name="customer-id" id="customer-id" class="form-control"
+                            style="width:270px" />
+                    </div>
+                    <div class="mb-2">
+                        <label for="customer-ship-to">Customer Ship-to</label>
+                        <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
+                            style="width:90px" />
+                    </div>
+                    <button type="submit" class="btn btn-success" id="submission-button-style">
+                        <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
+                            aria-hidden="true"></span>
+                        <span id="submission-button"> Add &nbsp &nbsp &nbsp</span>
+                    </button>
+                    <script>
 
-                </tbody>
-            </table>
+                    </script>
+                </form>
+            </div>
+            <div class="col-1">
+                <table class="table" style="width: 700px;">
+                    <thead>
+                        <tr>
+                            <th scope="col"> Operation</th>
+                            <th scope="col">Pricing Group ID</th>
+                            <th scope="col">Customer ID</th>
+                            <th scope="col">Ship-to</th>
+                            <th scope="col">Success/Fail</th>
+                            <th scope="col">Message</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestList">
+
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-
 </body>
 
 
