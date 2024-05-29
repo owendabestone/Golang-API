@@ -48,7 +48,7 @@ func login(payload *strings.Reader) LoginResponse {
 	return loginResponse
 }
 
-func getContextID(username string, password string) string {
+func getContextID(username *string, password *string) string {
 	// logging into Agility API and retrieve ContextID, which is needed to future interactions.
 
 	var loginResponse LoginResponse
@@ -56,8 +56,8 @@ func getContextID(username string, password string) string {
 	// Master account
 	var SECRET_KEYS *strings.Reader = strings.NewReader(`{
 		"request": {
-		"LoginID": "` + username + `",
-		"Password": "` + password + `"
+		"LoginID": "` + *username + `",
+		"Password": "` + *password + `"
 		}
 	}`)
 
@@ -77,13 +77,13 @@ func getContextID(username string, password string) string {
 	return contextID
 }
 
-func clientLogin(username string, password string) []string {
+func clientLogin(username *string, password *string) []string {
 	//Login client to confirm identity. Retreving default branch.
 
 	var CLIENT_LOGIN_INFO *strings.Reader = strings.NewReader(`{
 		"request": {
-		  "LoginID": "` + username + `",
-		  "Password": "` + password + `"
+		  "LoginID": "` + *username + `",
+		  "Password": "` + *password + `"
 		}
 	  }`)
 	var loginResponse LoginResponse
@@ -95,11 +95,11 @@ func clientLogin(username string, password string) []string {
 	var contextID string = sessionResponse.SessionContextId
 	var InitialBranch string = sessionResponse.InitialBranch
 	if messageText != "" {
-		log.Print("User:"+username+"  Client login failed. :", messageText)
+		log.Print("User:"+*username+"  Client login failed. :", messageText)
 		var branchlist []string
 		return branchlist
 	} else {
-		log.Print("User:" + username + "  Client login successful.")
+		log.Print("User:" + *username + "  Client login successful")
 
 		//Get available branches
 		req, err := http.NewRequest("POST", AGILITY_API+"Session/BranchList", nil)
@@ -112,7 +112,7 @@ func clientLogin(username string, password string) []string {
 		req.Header.Set("Branch", InitialBranch)
 		req.Header.Set("Content-Type", "application/json")
 		response, err := http.DefaultClient.Do(req)
-
+		fmt.Println(response)
 		//reading response
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -122,7 +122,7 @@ func clientLogin(username string, password string) []string {
 		//Parsing Json
 		var branchListResponse BranchListResponse
 		if err := json.Unmarshal(body, &branchListResponse); err != nil {
-			log.Print("Pricing Group Update , cannot unmarshal JSON:", err)
+			log.Print("BranchList download, cannot unmarshal JSON:", err)
 
 		}
 		sessionResponse := branchListResponse.Response
@@ -137,18 +137,18 @@ func clientLogin(username string, password string) []string {
 
 }
 
-func changePriceGroup(contextID string, branch string, customerID string, shipToSequence string, operation string, priceGroup string) (string, string) {
+func changePriceGroup(branch *string, customerID *string, shipToSequence *string, operation *string, priceGroup *string, username *string, password *string) (string, string) {
 	// method to interact with Agility API
 
 	var requestBody *strings.Reader = strings.NewReader(`{
 		"request": {
-		  "CustomerID": "` + customerID + `",
-		  "ShiptoSequence": "` + shipToSequence + `",
+		  "CustomerID": "` + *customerID + `",
+		  "ShiptoSequence": "` + *shipToSequence + `",
 		  "BranchShiptoJSON": {
 			"dsCustomerBranchShipto": {
 			  "dtCustomerBranchShipto": [
-				{"PriceGroupsAction": "` + operation + `",
-				"PriceGroups": "` + priceGroup + `"}]
+				{"PriceGroupsAction": "` + *operation + `",
+				"PriceGroups": "` + *priceGroup + `"}]
 			}
 		  }
 		}
@@ -159,8 +159,10 @@ func changePriceGroup(contextID string, branch string, customerID string, shipTo
 		log.Print("Change request failure:", err)
 	}
 
+	var contextID string = getContextID(username, password)
+
 	req.Header.Set("ContextId", contextID)
-	req.Header.Set("Branch", branch)
+	req.Header.Set("Branch", *branch)
 	req.Header.Set("Content-Type", "application/json")
 
 	response, err := http.DefaultClient.Do(req)
@@ -189,8 +191,10 @@ func changePriceGroup(contextID string, branch string, customerID string, shipTo
 		result = "Success"
 	} else if returnCode == 1 {
 		result = "Warning"
-	} else {
+	} else if returnCode == 2 {
 		result = "Error"
+	} else {
+		result = "Unknown Error"
 	}
 	return messageText, result
 }
@@ -211,9 +215,7 @@ func main() {
 	USERNAME := secrets[0]
 	PASSWORD := secrets[1]
 
-	var contextID string = getContextID(USERNAME, PASSWORD)
-
-	main := func(w http.ResponseWriter, r *http.Request) {
+	indexDelivery := func(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("index.html"))
 		tmpl.Execute(w, nil)
 	}
@@ -221,7 +223,7 @@ func main() {
 		//extract data
 		client_username := r.PostFormValue("client-username")
 		client_password := r.PostFormValue("client-password")
-		branchList := clientLogin(client_username, client_password)
+		branchList := clientLogin(&client_username, &client_password)
 		if len(branchList) == 0 {
 			htmlStr := fmt.Sprintf(`<p style='color:red;visibility:visible !important' >LOGIN FAILED, CHECK USERNAME OR PASSWORD</p>
 					<script>
@@ -251,7 +253,7 @@ func main() {
 
 	}
 	// handler function #2 - returns the template block with the newly added customers, as an HTMX response
-	addRequest := func(w http.ResponseWriter, r *http.Request) {
+	operationRequest := func(w http.ResponseWriter, r *http.Request) {
 
 		//delaying send request
 		milliseconds := 400
@@ -266,7 +268,7 @@ func main() {
 
 		log.Print(branch + " " + priceGroup + " " + CustomerID + " " + ShiptoSequence)
 
-		messageText, result := changePriceGroup(contextID, branch, CustomerID, ShiptoSequence, operation, priceGroup)
+		messageText, result := changePriceGroup(&branch, &CustomerID, &ShiptoSequence, &operation, &priceGroup, &USERNAME, &PASSWORD)
 		htmlStr := ""
 		if result == "Success" {
 			htmlStr = fmt.Sprintf(`<tr><th scope="row">%s</th>
@@ -304,9 +306,9 @@ func main() {
 	// log.Print(clientLogin("e135478", "Changeme123"))
 	// ID: COLLUPA S.T.: 2
 
-	http.HandleFunc("/", main)
+	http.HandleFunc("/", indexDelivery)
 	http.HandleFunc("/login/", loginRequest)
-	http.HandleFunc("/add-price-group/", addRequest)
+	http.HandleFunc("/add-price-group/", operationRequest)
 
 	log.Fatal(http.ListenAndServe(":8045", nil))
 }
