@@ -24,9 +24,11 @@ func BranchIdExtraction(x BranchListInner) string {
 	return x.BranchID
 }
 
-const AGILITY_API = "https://agilitywmstest.bc.com/Prod_DB_IIAgilityPublic/rest/"
+var AGILITY_API = "" //To be extracted from the secret file.
 
 func login(payload *strings.Reader) LoginResponse {
+	//General master login
+
 	response, err := http.Post(AGILITY_API+"Session/Login", "application/json", payload)
 	if err != nil {
 		log.Fatal("Master login error: ", err)
@@ -214,7 +216,7 @@ func main() {
 	secrets := strings.Fields(string(data))
 	USERNAME := secrets[0]
 	PASSWORD := secrets[1]
-
+	AGILITY_API = secrets[2]
 	indexDelivery := func(w http.ResponseWriter, r *http.Request) {
 		tmpl := template.Must(template.ParseFiles("index.html"))
 		tmpl.Execute(w, nil)
