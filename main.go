@@ -145,16 +145,21 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 	var requestBody *strings.Reader = strings.NewReader(`{
 		"request": {
 		  "CustomerID": "` + *customerID + `",
-		  "ShiptoSequence": "` + *shipToSequence + `",
+		  "ShiptoSequence": ` + *shipToSequence + `,
 		  "BranchShiptoJSON": {
 			"dsCustomerBranchShipto": {
 			  "dtCustomerBranchShipto": [
-				{"PriceGroupsAction": "` + *operation + `",
-				"PriceGroups": "` + *priceGroup + `"}]
+				{
+			  	"EnableDefaultCodes": true,
+				"PriceGroupsAction": "` + *operation + `",
+				"PriceGroups": "` + *priceGroup + `"
+				}]
+				
 			}
 		  }
 		}
 	  }`)
+
 	req, err := http.NewRequest("POST", AGILITY_API+"Customer/CustomerBranchShiptoUpdate", requestBody)
 
 	if err != nil {
@@ -181,17 +186,25 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 		log.Print("Pricing Group Update , cannot unmarshal JSON:", err)
 
 	}
-
-	// fmt.Println("Price Group response:", pricingGroupUdateResponse)
-
 	sessionResponse := pricingGroupUdateResponse.Response
+	var auditresult = sessionResponse.AuditResults
+	var dtAuditResults = auditresult.DsAuditResults.DtAuditResults
+	fmt.Println("audit result", dtAuditResults)
+	var auditmessage = ""
+	var auditSequence = 0
+	if len(dtAuditResults) != 0 {
+		var priceaudit = dtAuditResults[0]
+		auditmessage = priceaudit.AuditText
+		auditSequence = priceaudit.AuditSequence
+	}
 
 	var messageText = sessionResponse.MessageText
 	var returnCode int = sessionResponse.ReturnCode
+	messageText = messageText + auditmessage
 	result := " "
-	if returnCode == 0 {
+	if returnCode == 0 && auditSequence != 1 {
 		result = "Success"
-	} else if returnCode == 1 {
+	} else if returnCode == 1 || auditSequence == 1 {
 		result = "Warning"
 	} else if returnCode == 2 {
 		result = "Error"

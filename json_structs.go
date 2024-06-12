@@ -9,14 +9,20 @@ type LoginResponse struct {
 		MessageText      string `json:"MessageText"`
 	} `json:"response"`
 }
+type PriceAuditInner struct {
+	AuditSequence int    `json:"AuditSequence"`
+	AuditType     string `json:"AuditType"`
+	AuditText     string `json:"AuditText"`
+}
 
 // Use this to parse pricing group update responses
 type PricingGroupUpdateResponse struct {
 	Response struct {
-		DsAuditResults struct {
+		AuditResults struct {
 			DsAuditResults struct {
+				DtAuditResults []PriceAuditInner `json:"dtAuditResults"`
 			} `json:"dsAuditResults"`
-		} `json:"dsAuditResults"`
+		} `json:"AuditResults"`
 		ReturnCode  int    `json:"ReturnCode"`
 		MessageText string `json:"MessageText"`
 	} `json:"response"`
