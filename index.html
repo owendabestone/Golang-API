@@ -70,46 +70,10 @@
                         });
                     </script>
                 </form>
-                <form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin" hx-indicator="#spinner"
-                    style="visibility: hidden;" id="priceGroupForm">
-                    <div id="branchInput">
-                        <div class="mb-2">
-                            <label for="branch">Branch</label>
-                            <input type="text" name="branch" id="branch" class="form-control" readonly />
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <label for="operation">Operation </label>
-                        <select type="text" name="operation" id="operation" class="form-control"
-                            onchange="UpdateButton()">
-                            <option value="Add" selected>Add</option>
-                            <option value="Delete">Delete</option>
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label for="pricing-group-id">Pricing group ID</label>
-                        <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
-                            style="width:270px" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="customer-id">Customer ID</label>
-                        <input type="text" name="customer-id" id="customer-id" class="form-control"
-                            style="width:270px" />
-                    </div>
-                    <div class="mb-2">
-                        <label for="customer-ship-to">Customer Ship-to</label>
-                        <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
-                            style="width:90px" />
-                    </div>
-                    <button type="submit" class="btn btn-success" id="submission-button-style">
-                        <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
-                            aria-hidden="true"></span>
-                        <span id="submission-button"> Add &nbsp &nbsp &nbsp</span>
-                    </button>
-                    <script>
+                <div id="branchInput">
 
-                    </script>
-                </form>
+
+                </div>
             </div>
             <div class="col-1">
                 <table class="table" style="width: 700px;">

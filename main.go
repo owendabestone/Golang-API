@@ -248,14 +248,44 @@ func main() {
 			tmpl.Execute(w, nil)
 
 		} else {
-			htmlStr1 := `<div class='mb-2'>
+			htmlStr1 := `<form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin"
+                        hx-indicator="#spinner" id="priceGroupForm"> 
+						<div class='mb-2'>
 			<label for='branch'>Branch</label> 
 			<select name="branch" id="branch" class='form-control' required>`
-			htmlStr3 := `</select> 
+			htmlStr3 := `</select>
 									<script>
 									document.getElementById("LoginForm").setAttribute('hidden','');
-           							document.getElementById("priceGroupForm").style.visibility='visible';
-									</script>`
+									</script>
+							<div class="mb-2">
+                            <label for="operation">Operation </label>
+                            <select type="text" name="operation" id="operation" class="form-control"
+                                onchange="UpdateButton()">
+                                <option value="Add" selected>Add</option>
+                                <option value="Delete">Delete</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="pricing-group-id">Pricing group ID</label>
+                            <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
+                                style="width:270px" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer-id">Customer ID</label>
+                            <input type="text" name="customer-id" id="customer-id" class="form-control"
+                                style="width:270px" />
+                        </div>
+                        <div class="mb-2">
+                            <label for="customer-ship-to">Customer Ship-to</label>
+                            <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
+                                style="width:90px" />
+                        </div>
+                        <button type="submit" class="btn btn-success" id="submission-button-style">
+                            <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
+                                aria-hidden="true"></span>
+                            <span id="submission-button"> Add &nbsp &nbsp &nbsp</span>
+                        </button>
+                    </form>`
 			htmlStr2 := ""
 			for _, element := range branchList {
 				htmlStr2 = htmlStr2 + fmt.Sprintf(`<option value="%s">%s</option>`, element, element)
