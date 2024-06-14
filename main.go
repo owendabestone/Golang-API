@@ -215,7 +215,12 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 }
 
 func main() {
-	file, err := os.Open("secret.txt")
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	file, err := os.Open(pwd + "/secret.txt")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -260,7 +265,7 @@ func main() {
 							<div class="mb-2">
                             <label for="operation">Operation </label>
                             <select type="text" name="operation" id="operation" class="form-control"
-                                onchange="UpdateButton()">
+                                onchange="UpdateButton()" required>
                                 <option value="Add" selected>Add</option>
                                 <option value="Delete">Delete</option>
                             </select>
@@ -268,17 +273,17 @@ func main() {
                         <div class="mb-2">
                             <label for="pricing-group-id">Pricing group ID</label>
                             <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
-                                style="width:270px" />
+                                style="width:270px" required/>
                         </div>
                         <div class="mb-3">
                             <label for="customer-id">Customer ID</label>
                             <input type="text" name="customer-id" id="customer-id" class="form-control"
-                                style="width:270px" />
+                                style="width:270px" required/>
                         </div>
                         <div class="mb-2">
                             <label for="customer-ship-to">Customer Ship-to</label>
                             <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
-                                style="width:90px" />
+                                style="width:90px" required/>
                         </div>
                         <button type="submit" class="btn btn-success" id="submission-button-style">
                             <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
