@@ -46,3 +46,13 @@ type BranchListResponse struct {
 		MessageText string `json:"MessageText"`
 	} `json:"response"`
 }
+
+type PricingGroupListInner struct {
+	Name   string `json:"name"`
+	ID     string `json:"id"`
+	Shipto int    `json:"shipto"`
+}
+
+type PricingGroupList struct {
+	Response []PricingGroupListInner `json:"response"`
+}

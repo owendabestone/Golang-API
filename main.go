@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -25,6 +26,7 @@ func BranchIdExtraction(x BranchListInner) string {
 }
 
 var AGILITY_API = "" //To be extracted from the secret file.
+var BACKEND_API = "http://127.0.0.1:5000/fetch"
 
 func login(payload *strings.Reader) LoginResponse {
 	//General master login
@@ -141,6 +143,7 @@ func clientLogin(username *string, password *string) []string {
 
 func changePriceGroup(branch *string, customerID *string, shipToSequence *string, operation *string, priceGroup *string, username *string, password *string) (string, string) {
 	// method to interact with Agility API
+	log.Print(*branch + " " + *priceGroup + " " + *customerID + " " + *shipToSequence)
 
 	var requestBody *strings.Reader = strings.NewReader(`{
 		"request": {
@@ -159,6 +162,8 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 		  }
 		}
 	  }`)
+
+	log.Print(requestBody)
 
 	req, err := http.NewRequest("POST", AGILITY_API+"Customer/CustomerBranchShiptoUpdate", requestBody)
 
@@ -187,6 +192,7 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 
 	}
 	sessionResponse := pricingGroupUdateResponse.Response
+	fmt.Println(sessionResponse)
 	var auditresult = sessionResponse.AuditResults
 	var dtAuditResults = auditresult.DsAuditResults.DtAuditResults
 	fmt.Println("audit result", dtAuditResults)
@@ -215,7 +221,12 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 }
 
 func main() {
-	file, err := os.Open("secret.txt")
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	file, err := os.Open(pwd + "/secret.txt")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -238,9 +249,11 @@ func main() {
 		//extract data
 		client_username := r.PostFormValue("client-username")
 		client_password := r.PostFormValue("client-password")
+
+		log.Println(client_username)
 		branchList := clientLogin(&client_username, &client_password)
 		if len(branchList) == 0 {
-			htmlStr := fmt.Sprintf(`<p style='color:red;visibility:visible !important' >LOGIN FAILED, CHECK USERNAME OR PASSWORD</p>
+			htmlStr := fmt.Sprintf(`<p style='color:red;visibility:visible !important'>LOGIN FAILED, CHECK USERNAME OR PASSWORD</p>
 					<script>
 			   		document.getElementById("priceGroupForm").removeAttribute("hidden");
 					</script>`)
@@ -248,20 +261,72 @@ func main() {
 			tmpl.Execute(w, nil)
 
 		} else {
-			htmlStr1 := `<div class='mb-2'>
+			htmlStr1 := `<form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin"
+                        hx-indicator="#spinner" id="priceGroupForm"> 
+						<div class='mb-2'>
 			<label for='branch'>Branch</label> 
 			<select name="branch" id="branch" class='form-control' required>`
-			htmlStr3 := `</select> 
+			htmlStr3 := `</select>
+									</div>
 									<script>
 									document.getElementById("LoginForm").setAttribute('hidden','');
-           							document.getElementById("priceGroupForm").style.visibility='visible';
-									</script>`
+									</script>
+							<div class="mb-2">
+                            <label for="operation">Operation </label>
+                            <select type="text" name="operation" id="operation" class="form-control"
+                                onchange="UpdateButton()" required>
+                                <option value="Add" selected>Add</option>
+                                <option value="Delete">Delete</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="pricing-group-id">Pricing group ID</label>
+                            <input type="text" name="pricing-group-id" id="pricing-group-id" class="form-control"
+                                style="width:270px" required/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer-id">Customer ID</label>
+                            <input type="text" name="customer-id" id="customer-id" class="form-control"
+                                style="width:270px" required/>
+                        </div>
+                        <div class="mb-2">
+                            <label for="customer-ship-to">Customer Ship-to</label>
+                            <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
+                                style="width:90px" required/>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="submission-button-style">
+                            <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
+                                aria-hidden="true"></span>
+                            <span id="submission-button"> Add &nbsp &nbsp &nbsp</span>
+                        </button> </form>`
 			htmlStr2 := ""
 			for _, element := range branchList {
 				htmlStr2 = htmlStr2 + fmt.Sprintf(`<option value="%s">%s</option>`, element, element)
 			}
+			htmlStr4 := `
+					<hr/>
+					<h4> See what customers are in your pricing group:</h4>
+					<p> Results are updated every hour.</p>
+                    <form hx-post= "/fetch/" hx-target="#fetch_result"
+                    hx-indicator="#spinner"> 
+                    <div class="mb-3">
+                        <label for="branch">Branch</label>
+                        <select name="branch" id="branch" class='form-control' required>`
 
-			htmlStr := htmlStr1 + htmlStr2 + htmlStr3
+			htmlStr5 := `</select>
+                    </div>
+                    <div class="mb-2">
+                        <label for="pricing-group">Pricing group </label>
+                        <input name="pricing-group" id="pricing-group" class="form-control"
+                            style="width:200 px" required/>
+                    </div>
+                    <button type="submit" class="btn btn-secondary" id="submission-button-style">
+                        <span class="spinner-border spinner-border-sm htmx-indicator" id="spinner" role="status"
+                            aria-hidden="true"></span>
+                        <span id="submission-button"> Search &nbsp &nbsp &nbsp</span>
+                    </button>
+                    </form>`
+			htmlStr := htmlStr1 + htmlStr2 + htmlStr3 + htmlStr4 + htmlStr2 + htmlStr5
 			tmpl, _ := template.New("t").Parse(htmlStr)
 			tmpl.Execute(w, nil)
 		}
@@ -280,8 +345,6 @@ func main() {
 		CustomerID := r.PostFormValue("customer-id")
 		ShiptoSequence := r.PostFormValue("customer-ship-to")
 		priceGroup := r.PostFormValue("pricing-group-id")
-
-		log.Print(branch + " " + priceGroup + " " + CustomerID + " " + ShiptoSequence)
 
 		messageText, result := changePriceGroup(&branch, &CustomerID, &ShiptoSequence, &operation, &priceGroup, &USERNAME, &PASSWORD)
 		htmlStr := ""
@@ -317,13 +380,64 @@ func main() {
 		// tmpl := template.Must(template.ParseFiles("index.html"))
 		// tmpl.Execute(w, map[string]interface{}{"message": "message"})
 	}
+	fetch := func(w http.ResponseWriter, r *http.Request) {
 
+		branch := r.PostFormValue("branch")
+		priceGroup := r.PostFormValue("pricing-group")
+
+		post_body := []byte(`{
+			"branch":"` + branch + `",
+			"pricing_group":"` + priceGroup + `"}`)
+		// var requestBody *strings.Reader = strings.NewReader(`{
+		// 	"branch":` + branch + `
+		// 	"pricing_group:"` + priceGroup + `
+		//   }`)
+		req, _ := http.NewRequest("POST", BACKEND_API, bytes.NewBuffer(post_body))
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("method", "post")
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Print("Fetch pricing group error: ", err)
+		}
+
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal("Backend reply parsing error:", err)
+		}
+
+		//Parsing Json
+		var pricingGroupList PricingGroupList
+		if err := json.Unmarshal(body, &pricingGroupList); err != nil {
+			log.Print("Backend reply , cannot unmarshal JSON:", err)
+		}
+
+		var priceGrouplist = pricingGroupList.Response
+
+		htmlStr1 := `<table>
+						<tr>
+							<th>Customer Name</th>
+							<th>Customer ID</th>
+							<th>Ship-to</th>
+						</tr>`
+		htmlStr2 := ``
+		for _, element := range priceGrouplist {
+			htmlStr2 = htmlStr2 + fmt.Sprintf(`<tr><td>%s</td>
+											<td>%s</td>
+											<td>%v</td>
+											</tr>`, element.Name, element.ID, element.Shipto)
+		}
+
+		htmlStr3 := `</table>`
+		tmpl, _ := template.New("t").Parse(htmlStr1 + htmlStr2 + htmlStr3)
+		tmpl.Execute(w, nil)
+	}
 	// log.Print(clientLogin("e135478", "Changeme123"))
 	// ID: COLLUPA S.T.: 2
 
 	http.HandleFunc("/", indexDelivery)
 	http.HandleFunc("/login/", loginRequest)
 	http.HandleFunc("/add-price-group/", operationRequest)
-
+	http.HandleFunc("/fetch/", fetch)
 	log.Fatal(http.ListenAndServe(":8045", nil))
 }
