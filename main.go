@@ -227,6 +227,12 @@ func main() {
 		os.Exit(1)
 	}
 	file, err := os.Open(pwd + "/secret.txt")
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	file, err := os.Open(pwd + "/secret.txt")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -261,6 +267,9 @@ func main() {
 			tmpl.Execute(w, nil)
 
 		} else {
+			htmlStr1 := `<form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin"
+                        hx-indicator="#spinner" id="priceGroupForm"> 
+						<div class='mb-2'>
 			htmlStr1 := `<form hx-post="/add-price-group/" hx-target="#requestList" hx-swap="beforebegin"
                         hx-indicator="#spinner" id="priceGroupForm"> 
 						<div class='mb-2'>
