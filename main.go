@@ -328,7 +328,7 @@ func main() {
                         </div>
                         <div class="mb-2">
                             <label for="customer-ship-to">Customer Ship-to</label>
-                            <input type="number" name="customer-ship-to" id="customer-ship-to" class="form-control"
+                            <input type="number" min="1" name="customer-ship-to" id="customer-ship-to" class="form-control"
                                 style="width:90px" required/>
                         </div>
                         <button type="submit" class="btn btn-success" id="submission-button-style">

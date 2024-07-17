@@ -8,13 +8,18 @@ Ticket 3:
 Pricing query doesn't take spaces
 Ticket 4:
 Delete does not return whether pricing group is valid. 
+Ticket 5:
+Striping leading spaces. 
+ticket 6:
+Set ship to min to be 0 
 
 
 
+Test login function. Pass
+Pricing group add, incorrect pricing group ID, ship to, customer Pass	
+Pricing group delete.  Pass
+Special character. Pass
+Customer that has a pricing group that has been deleted. Pass (warning message being displayed, might require assistance.)
 
+Before releasing to PROD , we need to remove "," from all pricing group descriptions.
 
-Test login function.
-Pricing group add, incorrect pricing group ID, ship to, customer
-Pricing group delete. 
-Special character. 
-Customer that has a pricing group that has been deleted. 
