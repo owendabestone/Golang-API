@@ -26,7 +26,7 @@ func BranchIdExtraction(x BranchListInner) string {
 }
 
 var AGILITY_API = "" //To be extracted from the secret file.
-var BACKEND_API = "http://127.0.0.1:5000/fetch"
+var BACKEND_API = "http://127.0.0.1:5000"
 
 func login(payload *strings.Reader) LoginResponse {
 	//General master login
@@ -163,7 +163,7 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 		}
 	  }`)
 
-	log.Print(requestBody)
+	// log.Print(requestBody)
 
 	req, err := http.NewRequest("POST", AGILITY_API+"Customer/CustomerBranchShiptoUpdate", requestBody)
 
@@ -192,10 +192,10 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 
 	}
 	sessionResponse := pricingGroupUdateResponse.Response
-	fmt.Println(sessionResponse)
+	// fmt.Println(sessionResponse)
 	var auditresult = sessionResponse.AuditResults
 	var dtAuditResults = auditresult.DsAuditResults.DtAuditResults
-	fmt.Println("audit result", dtAuditResults)
+	// fmt.Println("audit result", dtAuditResults)
 	var auditmessage = ""
 	var auditSequence = 0
 	if len(dtAuditResults) != 0 {
@@ -217,7 +217,46 @@ func changePriceGroup(branch *string, customerID *string, shipToSequence *string
 	} else {
 		result = "Unknown Error"
 	}
+
+	if *operation == "Delete" {
+		if validat_pricing_group(*priceGroup) {
+		} else {
+			result = "Warning"
+			messageText = "Pricing group might not exist."
+		}
+	}
 	return messageText, result
+}
+
+func validat_pricing_group(pricingGroup string) bool {
+	post_body := []byte(`{
+		"pricing_group":"` + pricingGroup + `"}`)
+
+	req, _ := http.NewRequest("POST", BACKEND_API+"/validate", bytes.NewBuffer(post_body))
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("method", "post")
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Print("Validate pricing group error: ", err)
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Backend reply parsing error on valiation:", err)
+	}
+
+	//Parsing Json
+	var pricingGroupValidation PricingGroupValidation
+	if err := json.Unmarshal(body, &pricingGroupValidation); err != nil {
+		log.Print("Backend reply , cannot unmarshal JSON:", err)
+	}
+	log.Println(pricingGroupValidation.Valid)
+	if pricingGroupValidation.Valid {
+		return true
+	} else {
+		return false
+	}
 }
 
 func main() {
@@ -342,6 +381,7 @@ func main() {
 		operation := r.PostFormValue("operation")
 		CustomerID := r.PostFormValue("customer-id")
 		ShiptoSequence := r.PostFormValue("customer-ship-to")
+		ShiptoSequence = strings.TrimLeft(ShiptoSequence, "0")
 		priceGroup := r.PostFormValue("pricing-group-id")
 
 		messageText, result := changePriceGroup(&branch, &CustomerID, &ShiptoSequence, &operation, &priceGroup, &USERNAME, &PASSWORD)
@@ -386,11 +426,8 @@ func main() {
 		post_body := []byte(`{
 			"branch":"` + branch + `",
 			"pricing_group":"` + priceGroup + `"}`)
-		// var requestBody *strings.Reader = strings.NewReader(`{
-		// 	"branch":` + branch + `
-		// 	"pricing_group:"` + priceGroup + `
-		//   }`)
-		req, _ := http.NewRequest("POST", BACKEND_API, bytes.NewBuffer(post_body))
+
+		req, _ := http.NewRequest("POST", BACKEND_API+"/fetch", bytes.NewBuffer(post_body))
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("method", "post")

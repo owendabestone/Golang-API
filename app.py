@@ -14,16 +14,10 @@ engine = None
 def fetch():
     cleaned = request.data.decode('utf-8').replace('\t','').replace('\n','')
     body = json.loads(cleaned)
-    # json_str = request.data.decode('utf-8')
-    # json_objs = json_str.split('\n')
-    # for obj in json_objs:
-    #     print(json.loads(obj))
-
-
     pricing_group_raw = body['pricing_group']
     branch_raw = body['branch']
     branch = ''.join(letter for letter in branch_raw if letter.isalnum())
-    pricing_group = ''.join(letter for letter in pricing_group_raw if letter.isalnum())
+    pricing_group = ''.join(letter for letter in pricing_group_raw if letter.isalnum() or letter == ' ')
 
     with engine.connect() as connection:
         r = connection.execute(text(f"SELECT cust_name, cust_code , seq_num FROM PriceGroup WHERE group_id = '{pricing_group}' AND branch='{branch}'"))
@@ -35,6 +29,28 @@ def fetch():
     json_result = json.dumps({'response':result})
     return json_result
 
+@app.route('/validate', methods=['POST'])
+def validate():
+    cleaned = request.data.decode('utf-8').replace('\t','').replace('\n','')
+    body = json.loads(cleaned)
+    pricing_group_raw = body['pricing_group']
+    pricing_group = ''.join(letter for letter in pricing_group_raw if letter.isalnum() or letter == ' ')
+
+
+    with engine.connect() as connection:
+        r = connection.execute(text(f"SELECT TOP 1 * FROM PriceGroup WHERE group_id = '{pricing_group}' "))
+        rows = r.fetchall()
+        result = {}
+        for index in range(len(rows)):
+            result[index] ={'name':rows[index][0],'id':rows[index][1],'shipto':rows[index][2]}
+
+
+    if len(result) == 0:
+        json_result = json.dumps({"Valid":False})
+    else:
+        json_result = json.dumps({"Valid":True})
+        
+    return json_result
 if __name__ == "__main__":
 
     user = 'Groupie01'

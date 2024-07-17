@@ -56,3 +56,6 @@ type PricingGroupListInner struct {
 type PricingGroupList struct {
 	Response []PricingGroupListInner `json:"response"`
 }
+type PricingGroupValidation struct {
+	Valid bool `json:"Valid"`
+}

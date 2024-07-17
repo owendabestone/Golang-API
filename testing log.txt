@@ -1,5 +1,17 @@
 Testing on Prod II under owenzhangvm . 
-finding broken Pricing Groups
+
+Ticket 1: 
+Fixing broken Pricing Groups
+Ticket 2: 
+Ship-to 000 will break the audit
+Ticket 3:
+Pricing query doesn't take spaces
+Ticket 4:
+Delete does not return whether pricing group is valid. 
+
+
+
+
 
 Test login function.
 Pricing group add, incorrect pricing group ID, ship to, customer
